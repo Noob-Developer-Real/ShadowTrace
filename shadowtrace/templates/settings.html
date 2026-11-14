@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% from "_controls.html" import empty, pager with context %}
+{% block workspace %}
+<header class="page-title"><h1>Settings</h1><p>Manage application integrations and detection policy.</p></header>
+<nav class="tabs" aria-label="Settings">
+{% for id,label in [('integration','Integration'),('rules','Rules'),('audit','Audit history')] %}
+  {% if id != 'audit' or member.role == 'admin' %}<a href="{{ base }}/settings/{{ id }}" {% if section == id %}aria-current="page"{% endif %}>{{ label }}</a>{% endif %}
+{% endfor %}
+</nav>
+{% if section == 'integration' %}
+<section class="panel"><div class="panel-head"><div><h2>Event ingestion</h2><p>Use your workspace’s bearer token and send application audit metadata as JSON.</p></div></div>
+  <div class="inset"><code class="endpoint">POST /api/v1/events</code><pre>{{ example }}</pre><p class="help">Add fingerprint manifests to correlate records. A separate destination key reports receipts at <code>POST /api/v1/receipts</code>. These traces expire with their source events.</p></div>
+</section>
+{% if member.role == 'admin' %}
+<section class="panel records">
+  <div class="panel-head"><div><h2>Integration health</h2><p>Delivery totals since midnight UTC. Quiet means the source last sent a delivery more than 24 hours ago.</p></div></div>
+  {% if keys %}<div class="table-scroll" tabindex="0" role="region" aria-label="Integration health table"><table>
+    <thead><tr>{% for label in ['Source','Delivery state','Last accepted','Accepted','Replays','Rejected','Throttled'] %}<th scope="col">{{ label }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for key in keys %}<tr><td><strong>{{ key.label }}</strong><small>{{ {'receipts':'Destination receipts','events':'Audit events','impact':'Customer impact','protection':'Protection checks'}[key.purpose] }}</small></td>
+    <td><span class="label">{% if key.revoked_at %}Revoked{% elif not key.last_event %}Awaiting delivery{% elif key.quiet %}Quiet{% else %}Receiving{% endif %}</span></td>
+    <td>{{ key.last_event | dt('short') }}</td><td>{{ key.accepted | number }}</td><td>{{ key.replayed | number }}</td><td>{{ key.rejected | number }}</td><td>{{ key.throttled | number }}</td></tr>{% endfor %}</tbody>
+  </table></div>{% else %}{{ empty("No sources yet.", "Create an integration key to start tracking delivery.") }}{% endif %}
+  <p class="caption">Rejections cover invalid payloads and conflicting delivery IDs submitted with a recognized key.</p>
+</section>
+<section class="panel records">
+  <div class="panel-head"><div><h2>Integration keys</h2><p>Create a key for each monitored application.</p></div><button class="primary" data-open="key-create">Create key</button></div>
+  <p id="key-feedback" class="notice" role="status" hidden></p>
+  {% if keys %}<div class="table-scroll" tabindex="0" role="region" aria-label="Integration keys table"><table>
+  <thead><tr><th scope="col">Key name</th><th scope="col">Prefix</th><th scope="col">Created</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead>
+  <tbody>{% for key in keys %}<tr><td><strong>{{ key.label }}</strong><small>{{ {'receipts':'Destination receipts','events':'Audit events','impact':'Customer impact','protection':'Protection checks'}[key.purpose] }}</small>{% if key.destination %}<small>Signed receipts · {{ key.destination }}</small>{% endif %}{% if key.source_label %}<small>Source · {{ key.source_label }}</small>{% endif %}</td><td class="identifier">{{ key.prefix }}••••</td>
+  <td>{{ key.created_at | dt('short') }}</td><td>{{ 'Revoked' if key.revoked_at else 'Active' }}</td><td>{% if not key.revoked_at %}
+    <button class="secondary" data-revoke data-id="{{ key.id }}" data-label="{{ key.label }}" aria-label="Revoke {{ key.label }}">Revoke</button>
+  {% else %}—{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+  {% else %}{{ empty("No integration keys yet.", "Create a key and copy it into the monitored application’s secret store.") }}{% endif %}
+</section>
+<dialog id="key-create" aria-labelledby="key-title" data-base="/api/v1/workspaces/{{ member.slug }}/keys">
+  <h2 id="key-title">Create integration key</h2>
+  <form class="stack" data-key-create><label>Key name<input name="label" required minlength="1" maxlength="60" placeholder="Orders service" autofocus></label>
+    <label>Key purpose<select name="purpose"><option value="events">Audit events</option><option value="receipts">Destination receipts</option><option value="impact">Customer impact</option><option value="protection">Protection checks</option></select></label>
+    <fieldset data-key-signing hidden><legend>Receipt signing</legend>
+      <label>Destination alias<input name="destination" maxlength="80" autocomplete="off" placeholder="partner-import"></label>
+      <label>Ed25519 public key<input name="signing_public_key" maxlength="64" autocomplete="off" spellcheck="false" aria-describedby="signing-help"></label>
+      <p id="signing-help" class="help">Enter both fields for signed receipts. Use the public key as 64 lowercase hexadecimal characters.</p>
+    </fieldset>
+    <label data-key-source hidden>Audit event source<select name="source_key_id"><option value="">Choose a source</option>{% for source in keys if source.purpose == 'events' and not source.revoked_at %}<option value="{{ source.id }}">{{ source.label }}</option>{% endfor %}</select></label>
+    <div class="actions"><button class="primary">Create key</button><button type="button" class="secondary" data-close>Cancel</button></div>
+    <p class="feedback" role="status" hidden></p></form>
+  <div data-secret-view class="stack" hidden><p>Copy this key before closing. It is shown once.</p>
+    <label>Integration key<input data-secret type="text" readonly></label>
+    <div class="actions"><button class="primary" data-copy>Copy key</button><button class="secondary" data-close>Done</button></div>
+    <p class="feedback" role="status" hidden></p></div>
+</dialog>
+<dialog id="key-revoke" aria-labelledby="revoke-title" data-base="/api/v1/workspaces/{{ member.slug }}/keys">
+  <h2 id="revoke-title">Revoke integration key</h2><p>New deliveries from this key will be rejected. Existing activity stays available.</p>
+  <p><strong data-key-label></strong></p>
+  <form class="stack" data-key-revoke><div class="actions"><button class="danger">Revoke key</button><button type="button" class="secondary" data-close autofocus>Cancel</button></div><p class="feedback" role="status" hidden></p></form>
+</dialog>
+{% endif %}
+{% elif section == 'rules' %}
+<section class="panel"><div class="panel-head"><div><h2>Detection rules</h2><p>Version {{ policy.version }} · Changes apply to future activity.</p></div></div>
+  <form class="inset stack rules" data-rules data-revision="{{ policy.version }}" data-url="/api/v1/workspaces/{{ member.slug }}/rules">
+    <div><label>View threshold<input type="number" name="view_limit" min="1" max="100000" step="1" value="{{ policy.view_limit }}" required {% if member.role != 'admin' %}readonly{% endif %}></label><p class="help">High when successful views reach this count within five minutes.</p></div>
+    <div><label>Export threshold<input type="number" name="export_limit" min="1" max="100000" step="1" value="{{ policy.export_limit }}" required {% if member.role != 'admin' %}readonly{% endif %}></label><p class="help">Critical when a single successful export reaches this count.</p></div>
+    {% if member.role == 'admin' %}<div class="actions"><button class="primary">Save rules</button><button class="secondary" type="button" data-preview>Preview impact</button><button class="quiet" type="reset">Cancel</button></div>
+    <p class="feedback" role="status" hidden></p><button type="button" class="secondary refresh-draft" hidden>Reload rules and keep draft</button>{% endif %}
+  </form>
+</section>
+{% if member.role == 'admin' %}
+<section class="panel" data-replay-result aria-labelledby="replay-title">
+  <div class="panel-head"><div><h2 id="replay-title">Historical rule replay</h2><p>Compare saved and proposed thresholds against the most recent 24 hours of successful events, up to 5,000 deliveries.</p></div></div>
+  <p class="caption" data-replay-status role="status">Use Preview impact to see how many events would match each rule.</p>
+  <div data-replay-details hidden>
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Replay comparison table"><table>
+      <thead><tr><th scope="col">Rule</th><th scope="col">Matches now</th><th scope="col">Matches if saved</th><th scope="col">New matches</th><th scope="col">Removed matches</th></tr></thead>
+      <tbody><tr data-rule="view"><th scope="row">View burst</th><td></td><td></td><td></td><td></td></tr><tr data-rule="export"><th scope="row">Large export</th><td></td><td></td><td></td><td></td></tr></tbody>
+    </table></div>
+    <div class="inset replay-examples" data-replay-examples hidden><h3>Events with a changed result</h3><ul></ul></div>
+  </div>
+</section>
+{% endif %}
+{% else %}
+<section class="panel records"><div class="panel-head"><div><h2>Audit history</h2><p>Key changes, policy revisions, case decisions and evidence downloads.</p></div></div>
+{% if audit %}<div class="table-scroll" tabindex="0" role="region" aria-label="Audit history table"><table><thead><tr><th scope="col">Time</th><th scope="col">Actor</th><th scope="col">Action</th><th scope="col">Subject</th></tr></thead>
+<tbody>{% for item in audit %}<tr><td>{{ item.created_at | dt }}</td><td>{{ item.actor }}</td><td>{{ item.operation }}</td><td class="identifier">{{ item.subject }}</td></tr>{% endfor %}</tbody></table></div>
+{% else %}{{ empty("No audit records yet.", "Workspace changes appear here after they are saved.") }}{% endif %}{{ pager(prev,more) }}</section>
+{% endif %}
+{% endblock %}

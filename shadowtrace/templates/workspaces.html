@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block public %}
+<section class="center">
+  <header class="page-title"><h1>Choose a workspace</h1><p>Signed in as {{ principal.name }}.</p></header>
+  {% if items %}<div class="workspace-list">
+    {% for item in items %}<a class="workspace option panel" href="/w/{{ item.slug }}">
+      <span class="avatar" aria-hidden="true">{{ item.name[0] }}</span><span><strong>{{ item.name }}</strong><small>{{ item.role | title }}</small></span><span class="chev" aria-hidden="true"></span>
+    </a>{% endfor %}
+  </div>{% else %}<div class="panel empty"><strong>No workspace access.</strong><p>Ask your workspace administrator.</p></div>{% endif %}
+</section>
+{% endblock %}

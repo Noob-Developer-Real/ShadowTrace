@@ -1,0 +1,7 @@
+**
+!pyproject.toml
+!uv.lock
+!shadowtrace/
+!shadowtrace/**
+**/__pycache__
+**/*.pyc

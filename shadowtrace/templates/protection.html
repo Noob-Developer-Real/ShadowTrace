@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from "_controls.html" import empty, pager with context %}
+{% block workspace %}
+<header class="page-title title-actions">
+  <div><h1>Protection</h1><p>Control exports, downloads, and shares before connected apps release records.</p></div>
+  <a class="button secondary" href="#protection-decisions">View decisions <span class="chev" aria-hidden="true"></span></a>
+</header>
+<p class="notice" role="status" data-response-feedback hidden></p>
+<nav class="tabs" aria-label="Protection sections"><a href="#protection-policy-title">Release policy</a><a href="#transfer-approvals">Approvals</a><a href="#managed-links">Cloud links</a><a href="#protection-decisions">Decision history</a></nav>
+<div class="metrics protection-metrics" data-protection-metrics aria-label="Protection summary">
+  <section class="metric"><h2>Policy state</h2><strong>{{ policy.mode | title }}</strong><p>{{ 'Revision ' ~ policy.version if policy.version else 'Default policy' }}</p></section>
+  <section class="metric"><h2>Blocked</h2><strong>{{ totals.blocked | number }}</strong><p>Policy denials in the last 24 hours</p></section>
+  <section class="metric"><h2>Authorized</h2><strong>{{ totals.allowed | number }}</strong><p>Release decisions in the last 24 hours</p></section>
+</div>
+
+<section class="panel protection-policy" aria-labelledby="protection-policy-title">
+  <div class="panel-head"><div><h2 id="protection-policy-title">Release policy</h2><p>A transfer must be within its action limit and use an approved destination.</p></div></div>
+  {% if member.role == "admin" %}
+  <form class="inset stack" data-protection-policy="/api/v1/workspaces/{{ member.slug }}/protection/policy" data-version="{{ policy.version }}">
+    <div class="response-fields">
+      <label>Policy mode<select name="mode"><option value="active"{% if policy.mode == 'active' %} selected{% endif %}>Active</option><option value="paused"{% if policy.mode == 'paused' %} selected{% endif %}>Paused</option></select></label>
+      {% for action in actions %}<label>{{ action | title }} record limit<input name="{{ action }}_limit" min="0" max="1000000" step="1" type="number" value="{{ policy[action ~ '_limit'] }}" required></label>{% endfor %}
+      <label>24-hour actor limit<input name="cumulative_limit" min="0" max="10000000" step="1" type="number" value="{{ policy.cumulative_limit }}" required></label>
+      <label>Customer approval threshold<input name="approval_threshold" min="0" max="1000000" step="1" type="number" value="{{ policy.approval_threshold }}" required></label>
+    </div>
+    <p class="help">The actor limit counts authorized records across connected apps and actions over 24 hours. The approval threshold applies to customer transfers at or above that count. Zero turns off either of these two rules.</p>
+    <p class="help">Paused blocks new protected releases. A limit of zero disables that action.</p>
+    <label>Approved destination aliases<textarea name="destinations" rows="3" maxlength="1630" aria-describedby="destination-alias-help" spellcheck="false">{{ policy.destinations | join('\n') }}</textarea></label>
+    <p class="help" id="destination-alias-help">Enter one alias per line, up to 20. Use the exact aliases configured in your source app.</p>
+    <div class="actions"><button class="primary">Save policy</button><a class="quiet" href="{{ base }}/settings/integration">Manage source keys</a></div>
+    <p class="feedback" role="status" hidden></p>
+  </form>
+  {% else %}
+  <dl class="inset protection-values">{% for action in actions %}<div><dt>{{ action | title }} record limit</dt><dd>{{ policy[action ~ '_limit'] | number }}</dd></div>{% endfor %}
+  <div><dt>24-hour actor limit</dt><dd>{{ policy.cumulative_limit | number if policy.cumulative_limit else 'Off' }}</dd></div>
+  <div><dt>Customer approval threshold</dt><dd>{{ policy.approval_threshold | number if policy.approval_threshold else 'Off' }}</dd></div>
+  <div><dt>Approved destination aliases</dt><dd>{{ policy.destinations | join(', ') or 'None configured' }}</dd></div></dl>
+  {% endif %}
+</section>
+
+{% if demo_protection %}
+<section class="panel demo-panel" aria-labelledby="protection-demo-title">
+  <div class="panel-head"><div><h2 id="protection-demo-title">Try a protected transfer</h2><p>Send synthetic records to an approved partner and attempt to share them to a personal drive. Both use this workspace’s current policy.</p></div></div>
+  <form class="inset stack" data-protection-demo="/api/v1/workspaces/{{ member.slug }}/demo-protection">
+    <div class="actions"><button class="primary">Run protection demo</button></div>
+    <p class="feedback" role="status" hidden></p>
+    <ul class="protection-results" aria-label="Demo transfer results" hidden></ul>
+  </form>
+</section>
+{% endif %}
+
+{% include "_managed_demo.html" %}
+<div data-managed-transfers>{% include "_managed_transfers.html" %}</div>
+
+<section class="panel records" id="protection-decisions" aria-labelledby="protection-decisions-title">
+  <div class="panel-head"><div><h2 id="protection-decisions-title">Decision history</h2><p>Authorization decisions appear here. Use destination receipts to investigate reported delivery.</p></div></div>
+  <form class="filter-bar inset" action="{{ base }}/protection" method="get">
+    <label>Action<select name="action"><option value="">All actions</option>{% for action in actions %}<option value="{{ action }}"{% if action == values.action %} selected{% endif %}>{{ action | title }}</option>{% endfor %}</select></label>
+    <label>Decision<select name="outcome"><option value="">All decisions</option>{% for outcome in outcomes %}<option value="{{ outcome }}"{% if outcome == values.outcome %} selected{% endif %}>{{ 'Authorized' if outcome == 'allowed' else 'Blocked' }}</option>{% endfor %}</select></label>
+    <button class="primary">Apply filters</button><a class="quiet" href="{{ base }}/protection#protection-decisions">Clear</a>
+  </form>
+  {% if problem %}<p class="notice error" role="alert">{{ problem }}</p>{% endif %}
+  {% if decisions %}<ul class="trace-list protection-log">{% for item in decisions %}
+    <li><div><h3>{{ item.action | title }} · {{ item.record_count | number }} {{ item.resource_type }} records</h3>
+      <p>{{ item.actor_id }} · {{ item.label }} · {{ item.decided_at | dt }}</p>
+      {% if item.intent.channel == 'scheduled' %}<p>Scheduled export · {{ item.intent.schedule_id }} · {{ item.intent.scheduled.occurred_at }}</p>{% endif %}
+      {% if item.intent.channel == 'cloud_link' %}<p>Managed cloud link</p>{% endif %}
+      <details><summary>Decision details</summary><p>Operation ID <span class="identifier">{{ item.request_id }}</span></p><p>Policy revision {{ item.revision }}</p></details>
+    </div><div class="trace-match"><span class="label" {% if item.outcome == 'blocked' %}data-blocked{% endif %}>{{ 'Authorized' if item.outcome == 'allowed' else 'Blocked' }}</span><small>{{ reasons[item.reason] }}</small><small>Destination {{ item.destination }}</small></div></li>
+  {% endfor %}</ul>
+  {% else %}{{ empty("No matching decisions.", "Decisions appear when a connected app checks a transfer.") }}{% endif %}
+  {{ pager(prev, more) }}
+</section>
+{% endblock %}

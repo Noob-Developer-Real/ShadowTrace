@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "_controls.html" import case_rows, empty with context %}
+{% block workspace %}
+<header class="page-title title-actions"><div><h1>Overview</h1><p>Review unusual application access across this workspace.</p></div><a href="{{ base }}/cases" class="button primary">Open case queue<span class="chev" aria-hidden="true"></span></a></header>
+{% if demo_controls %}
+<section class="panel demo-panel" data-demo-run data-url="/api/v1/workspaces/{{ member.slug }}/demo" aria-labelledby="demo-title">
+  <div class="panel-head">
+    <div><h2 id="demo-title">Run a live demo</h2><p>Send routine activity or simulate a burst of customer views followed by a bulk export. The export scenario also loads synthetic history for the actor comparison.</p></div>
+    <a class="quiet" href="{{ base }}/activity">Open activity</a>
+  </div>
+  <div class="inset stack">
+    <div class="actions"><button type="button" class="secondary" data-scenario="normal">Run normal activity</button><button type="button" class="secondary" data-scenario="incident">Run suspicious export</button>{% if demo_lineage %}<button type="button" class="primary" data-scenario="lineage">Run record lineage demo</button>{% endif %}</div>
+    <p class="feedback" role="status" hidden></p>
+    {% if demo_protection %}<p><a class="record-link" href="{{ base }}/protection">Try the protection demo</a></p>{% endif %}
+    <div class="actions"><a class="record-link" data-case-link hidden>Open generated case</a><a class="record-link" data-trace-link hidden>Open record lineage</a></div>
+  </div>
+</section>
+{% endif %}
+<div class="metrics">
+  <section class="metric"><h2>Cases needing review</h2><strong>{{ stats.active | number }}</strong><p><span class="status-dot"></span>{{ stats.critical | number }} critical</p></section>
+  <section class="metric"><h2>Audit events</h2><strong>{{ summary.events | number }}</strong><p>Accepted in the last 24 hours</p></section>
+  <section class="metric"><h2>Monitored identities</h2><strong>{{ summary.actors | number }}</strong><p>Active in the last 24 hours</p></section>
+</div>
+<section class="panel chart-panel">
+  <div class="panel-head"><div><h2>Access activity</h2><p>Accepted events per hour · Last 24 hours · UTC</p></div><a class="quiet" href="{{ base }}/activity">View activity</a></div>
+  {% if summary.events %}
+  <div class="plot" aria-hidden="true">
+    <div class="scale"><span>{{ peak }}</span><span>0</span></div>
+    <div class="bars">{% for item in histogram %}<div class="bar" title="{{ item.hour | dt('short') }} · {{ item.amount }} events"><progress max="100" value="{{ item.height }}"></progress></div>{% endfor %}</div>
+  </div>
+  <div class="chart-time" aria-hidden="true"><span>{{ histogram[0].hour | dt('short') }}</span><span>{{ histogram[-1].hour | dt('short') }}</span></div>
+  <details class="chart-values"><summary>Hourly totals</summary><dl>{% for item in histogram %}<div><dt>{{ item.hour | dt('short') }}</dt><dd>{{ item.amount }} events</dd></div>{% endfor %}</dl></details>
+  <p class="caption">Most recent accepted event {{ summary.fresh | dt }}.</p>
+  {% else %}
+  {{ empty("No activity in the last 24 hours.", "New events appear here after your integration sends them.") }}
+  {% if member.role == "admin" %}<p class="caption"><a href="{{ base }}/settings/integration">Open integration settings</a></p>{% endif %}
+  {% endif %}
+</section>
+<section class="panel records"><div class="panel-head"><div><h2>Recent cases</h2><p>Ordered by latest detection activity.</p></div><a class="quiet" href="{{ base }}/cases">View all cases</a></div>
+{% if cases %}{{ case_rows(cases, member.slug, '') }}{% else %}{{ empty("No cases yet.", "Cases appear when an event matches a detection rule.") }}{% endif %}
+</section>
+{% endblock %}

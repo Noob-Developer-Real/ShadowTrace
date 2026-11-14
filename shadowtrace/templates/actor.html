@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "_controls.html" import case_rows, empty with context %}
+{% block workspace %}
+<a class="breadcrumbs" href="{{ base }}/activity?actor={{ actor | urlencode }}"><span class="chev back" aria-hidden="true"></span>Actor activity</a>
+<header class="page-title"><h1>{{ actor }}</h1><p>Actor profile · Pseudonymous identity</p></header>
+<div class="metrics">
+  <section class="metric"><h2>Audit events</h2><strong>{{ stats.events | number }}</strong><p>Last 14 days</p></section>
+  <section class="metric"><h2>Successful exports</h2><strong>{{ stats.exports | number }}</strong><p>Last 14 days</p></section>
+  <section class="metric"><h2>Latest accepted event</h2><p class="actor-latest">{{ stats.latest | dt('short') if stats.latest else 'No recent events' }}</p><p>Last 14 days</p></section>
+</div>
+<section class="panel records">
+  <div class="panel-head"><div><h2>View baseline</h2><p>Successful views in active five-minute UTC windows over the last 14 days.</p></div></div>
+  {% if history %}<div class="table-scroll" tabindex="0" role="region" aria-label="Actor baseline table"><table>
+    <thead><tr><th scope="col">Resource</th><th scope="col">Median</th><th scope="col">90th percentile</th><th scope="col">History</th></tr></thead>
+    <tbody>{% for name,item in history | dictsort %}<tr>
+    <th scope="row">{{ name | title }}</th>
+    {% if item.ready %}<td>{{ item.typical | number }} records</td><td>{{ item.upper | number }} records</td>
+    {% else %}<td colspan="2">Insufficient history</td>{% endif %}
+    <td>{{ item.samples }} windows · {{ item.days }} UTC days</td></tr>{% endfor %}</tbody>
+  </table></div>{% else %}{{ empty("Insufficient history.", "There are no successful views in the baseline period.") }}{% endif %}
+  <p class="caption">Comparisons require at least eight windows across three UTC days.</p>
+</section>
+<section class="panel records"><div class="panel-head"><div><h2>Latest activity</h2></div><a class="quiet" href="{{ base }}/activity?actor={{ actor | urlencode }}">View all activity</a></div>
+{% if events %}<div class="table-scroll" tabindex="0" role="region" aria-label="Latest activity table"><table>
+<thead><tr>{% for label in ['Received','Action','Resource','Records','Outcome'] %}<th scope="col">{{ label }}</th>{% endfor %}</tr></thead>
+<tbody>{% for event in events %}<tr><td>{{ event.received_at | dt }}</td><td>{{ event.action | title }}</td><td>{{ event.resource_type | title }}</td><td>{{ event.records_accessed | number }}</td><td>{{ event.outcome | title }}</td></tr>{% endfor %}</tbody></table></div>
+{% else %}{{ empty("No source events available.", "Older events expire according to workspace retention.") }}{% endif %}</section>
+<section class="panel records"><div class="panel-head"><h2>Recent cases</h2><a class="quiet" href="{{ base }}/cases?actor={{ actor | urlencode }}">View all cases</a></div>
+{% if cases %}{{ case_rows(cases, member.slug, '') }}{% else %}{{ empty("No cases for this actor.", "Case activity appears here when a detection rule is met.") }}{% endif %}</section>
+{% endblock %}

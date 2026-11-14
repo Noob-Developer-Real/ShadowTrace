@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block public %}
+<section class="center">
+  <header class="page-title"><h1>{{ title }}</h1>
+  <p>{{ help_text or ("Check the link or open a workspace you can access." if problem == 404 else "Try the request again or return to your workspaces.") }}</p></header>
+  <div class="actions"><a class="button primary" href="/workspaces">Open workspaces</a>
+    {% if problem >= 500 %}<button class="secondary" data-reload>Retry</button>{% endif %}</div>
+  {% if problem >= 500 %}<p class="caption">Request ID {{ request.state.request_id }}</p>{% endif %}
+</section>
+{% endblock %}

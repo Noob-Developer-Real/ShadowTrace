@@ -1,0 +1,15 @@
+{% if demo_protection %}
+<section class="panel demo-panel" aria-labelledby="managed-demo-title">
+  <div class="panel-head"><div><h2 id="managed-demo-title">Try managed transfers</h2><p>Run a scheduled export or create a cloud link for a workspace member using synthetic data.</p></div></div>
+  <form class="inset stack" data-managed-demo="/api/v1/workspaces/{{ member.slug }}/demo-managed" data-user="{{ identity.principal_id }}">
+    <div class="response-fields">
+      <label>Sample transfer<select name="variant"><option value="scheduled">Scheduled export</option><option value="cloud">Managed cloud link</option></select></label>
+      <label data-demo-recipient hidden>Link recipient<select name="recipient" disabled>{% for person in recipients %}<option value="{{ person.id }}"{% if person.id == identity.principal_id %} selected{% endif %}>{{ person.name }}</option>{% endfor %}</select></label>
+    </div>
+    <label class="check"><input type="checkbox" name="sensitive">Require sensitive transfer approval</label>
+    <div class="actions"><button class="primary">Run managed transfer</button><button type="button" class="secondary" data-new-occurrence>New sample</button><a href="#transfer-approvals" class="quiet">Review requests</a></div>
+    <p class="feedback" role="status" hidden></p>
+    <a class="record-link" data-managed-result hidden>Open recipient link</a>
+  </form>
+</section>
+{% endif %}

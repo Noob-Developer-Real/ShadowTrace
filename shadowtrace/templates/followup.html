@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "_controls.html" import empty, pager with context %}
+{% block workspace %}
+<header class="page-title"><h1>Follow-up</h1><p>Review overdue receipts and changes in destination evidence.</p></header>
+<nav class="tabs" aria-label="Case queues"><a href="{{ base }}/cases">All cases</a><a href="{{ base }}/cases/follow-up" aria-current="page">Follow-up</a></nav>
+<form class="filter-bar" action="{{ base }}/cases/follow-up" method="get" data-followup-save="/api/v1/workspaces/{{ member.slug }}/follow-up/filters">
+  <label>Reason<select name="reason"><option value="">All reasons</option>{% for id,label in reason_names.items() %}<option value="{{ id }}"{% if values.reason == id %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label>Review state<select name="state">{% for id,label in [('needs','Needs review'),('reviewed','Reviewed'),('all','All states')] %}<option value="{{ id }}"{% if values.state == id %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label class="check"><input type="checkbox" name="owner" value="me"{% if values.owner %} checked{% endif %}>My cases</label>
+  <button class="primary">Apply filters</button><button type="button" class="secondary" data-save-view>Save filters</button><a class="quiet" href="{{ base }}/cases/follow-up?state=needs">Clear</a>
+  <p class="feedback" role="status" hidden></p>
+</form>
+
+<p class="notice" role="status" data-response-feedback hidden></p>
+{% if problem %}<p class="notice error" role="alert">{{ problem }}</p>{% endif %}
+{% if followups %}
+{% set return_to = request.url.path ~ ('?' ~ request.url.query if request.url.query else '') %}
+<section class="panel records" aria-labelledby="followup-items">
+  <div class="panel-head"><div><h2 id="followup-items">Exports to review</h2><p>Most recent evidence first. Closed cases return here when new evidence needs review.</p></div></div>
+  <ul class="trace-list followup-list">{% for item in followups %}
+    <li><div>
+      <h3>{{ item.records_accessed | number }} {{ item.resource_type }} records exported</h3>
+      <p>{{ item.actor_id }} · {{ item.changed_at | dt }}</p>
+      <div class="actions followup-labels">{% for reason in item.reasons %}<span class="label">{{ reason_names[reason] }}</span>{% endfor %}</div>
+      {% if item.expected_destination %}<p>Expected {{ item.expected_destination }} · Due {{ item.receipt_due_at | dt }}</p>{% endif %}
+    </div><div class="followup-links">
+      <p><strong>{{ 'Reviewed' if item.reviewed else 'Needs review' }}</strong>{% if item.case_id %} · {{ status_names[item.status] }} · {{ item.assignee or 'Unassigned' }}{% endif %}</p>
+      <div class="actions">
+        <a class="record-link" href="{{ base }}/exports/id-{{ item.event_id | urlencode }}">Open trace<span class="sr-only"> {{ item.event_id }}</span></a>
+        {% if item.case_id %}<a class="record-link" href="{{ base }}/cases/{{ item.case_id }}?back={{ return_to | urlencode }}">{{ 'Review case' if item.status in ['resolved','dismissed'] else 'Open case' }}<span class="sr-only"> {{ item.case_id }}</span></a>{% endif %}
+      </div>
+    </div></li>
+  {% endfor %}</ul>
+  {{ pager(prev,more) }}
+</section>
+{% else %}<section class="panel">{{ empty("No exports match these filters.", "Export deadlines and signed receipt findings will appear here when they need review.") }}</section>{% endif %}
+{% endblock %}

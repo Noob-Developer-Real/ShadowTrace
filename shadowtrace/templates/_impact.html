@@ -1,0 +1,30 @@
+{% if impact_enabled %}
+<section class="panel records" aria-labelledby="impact-title">
+  <div class="panel-head"><div><h2 id="impact-title">Customer impact</h2><p>Request an approved source-side lookup. Customer identities stay in the source system.</p></div></div>
+  <form class="inset stack" data-response-action="/api/v1/workspaces/{{ member.slug }}/exports/id-{{ trace.export.event_id | urlencode }}/impact">
+    <input type="hidden" name="request_id" value="{{ impact_request_id }}">
+    <div class="response-fields">
+      <label>Record scope<select name="scope">{% for id,label in impact_scopes.items() %}<option value="{{ id }}">{{ label }}</option>{% endfor %}</select></label>
+      <label>Lookup reason<select name="reason" required><option value="">Choose a reason</option>{% for id,label in impact_reasons.items() %}<option value="{{ id }}">{{ label }}</option>{% endfor %}</select></label>
+      <label>Ticket ID<input name="ticket" required maxlength="80" pattern="[A-Za-z0-9._\-]{1,80}" placeholder="INC-1042" aria-describedby="ticket-note"></label>
+    </div>
+    <p id="ticket-note" class="help">Use an incident reference. Another workspace admin must approve the lookup.</p>
+    <div class="actions"><button class="primary">Request lookup</button></div>
+    <p class="feedback" role="status" hidden></p>
+  </form>
+  {% if impact %}<ul class="trace-list" aria-label="Recent impact lookups">{% for job in impact %}
+  <li><div><h3>{{ job.ticket }} · {{ impact_scopes[job.scope] }}</h3>
+    <p>{{ impact_reasons[job.reason] }} · Requested by {{ job.requester }}{% if job.approver %} · Approved by {{ job.approver }}{% endif %}</p>
+    <p><span class="label">{{ job.state | title }}</span> · {{ job.requested_count | number }} tracked records{% if job.matched_count is not none %} · {{ job.matched_count | number }} resolved at source{% endif %}</p>
+    <details><summary>Lookup details</summary><p>Request ID <span class="identifier">{{ job.id }}</span></p><p>Expires {{ job.expires_at | dt }}</p></details>
+    </div><div class="actions">
+    {% if job.state == 'pending' and member.role == 'admin' and job.requester_id != identity.principal_id %}
+    <form data-response-action="/api/v1/workspaces/{{ member.slug }}/impact/{{ job.id }}/approve"><button class="primary" aria-label="Approve lookup {{ job.ticket }}">Approve lookup</button><p class="feedback" role="status" hidden></p></form>{% endif %}
+    {% if job.state in ['pending','approved'] and (member.role == 'admin' or job.requester_id == identity.principal_id) %}
+    <form data-response-action="/api/v1/workspaces/{{ member.slug }}/impact/{{ job.id }}/cancel"><button class="secondary" aria-label="Cancel lookup {{ job.ticket }}">Cancel lookup</button><p class="feedback" role="status" hidden></p></form>{% endif %}
+    {% if job.state == 'approved' and demo_resolver and member.role == 'admin' and '-lineage-' in trace.export.event_id %}
+    <form data-response-action="/api/v1/workspaces/{{ member.slug }}/demo-impact/{{ job.id }}"><button class="secondary" aria-label="Run synthetic resolver for {{ job.ticket }}">Run synthetic resolver</button><p class="feedback" role="status" hidden></p></form>{% endif %}
+  </div></li>
+  {% endfor %}</ul>{% else %}<p class="caption">No lookups have been requested for this export.</p>{% endif %}
+</section>
+{% endif %}

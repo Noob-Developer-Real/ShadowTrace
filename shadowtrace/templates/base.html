@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  {% if identity %}<meta name="csrf-token" content="{{ identity.csrf }}">{% endif %}
+  <title>{{ title }} | ShadowTrace</title>
+  <link rel="icon" href="/static/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/console.css">
+  <script src="/static/theme.js"></script>
+  <script src="/static/console.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+{% if member %}
+{% set base = "/w/" ~ member.slug %}
+<div class="shell">
+  <aside class="rail">
+    <a class="brand" href="{{ base }}"><img src="/static/mark.svg" alt="" width="30" height="30">ShadowTrace</a>
+    <a class="workspace" href="/workspaces"><span class="avatar" aria-hidden="true">{{ member.name[0] }}</span><span>{{ member.name }}<small>{{ member.role | title }}</small></span><span class="chev" aria-hidden="true"></span></a>
+    <nav aria-label="Workspace">
+      {% for label,path,icon in [("Overview","","overview"),("Cases","/cases","cases"),("Activity","/activity","activity"),("Protection","/protection","protection"),("Settings","/settings","settings")] %}
+      <a href="{{ base }}{{ path }}" {% if title == label or (title in ["Case details", "Follow-up"] and label == "Cases") or (title == "Record lineage" and label == "Activity") %}aria-current="page"{% endif %}>
+        <span class="nav-icon {{ icon }}" aria-hidden="true"></span>{{ label }}</a>
+      {% endfor %}
+    </nav>
+    <div class="rail-bottom">
+      <label for="theme">Appearance</label>
+      <select id="theme"><option value="system">System</option><option value="light" selected>Light</option><option value="dark">Dark</option></select>
+      <div class="identity"><span>{{ member.principal_name }}</span><button class="quiet" data-logout>Sign out</button></div>
+    </div>
+  </aside>
+  <div class="stage">
+    <div class="context-bar"><span>{{ member.name }}</span>{% if demo %}<span class="demo"><span></span>Synthetic demo</span>{% endif %}</div>
+    <main class="main" id="main" tabindex="-1">{% block workspace %}{% endblock %}</main>
+  </div>
+</div>
+{% else %}
+<header class="public-top"><a class="brand" href="/"><img src="/static/mark.svg" alt="" width="30" height="30">ShadowTrace</a>
+{% if identity %}<button data-logout class="quiet">Sign out</button>{% endif %}</header>
+<main id="main" class="public-main" tabindex="-1">{% block public %}{% endblock %}</main>
+{% endif %}
+<div class="global-message" id="global-message" role="status" hidden></div>
+</body>
+</html>

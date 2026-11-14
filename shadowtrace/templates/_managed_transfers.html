@@ -1,0 +1,57 @@
+<section class="panel records" id="transfer-approvals" aria-labelledby="transfer-approvals-title">
+  <div class="panel-head"><div><h2 id="transfer-approvals-title">Sensitive transfer approvals</h2><p>Review requests before the source retriggers their release.</p></div></div>
+  {% if approvals %}<ul class="trace-list">{% for item in approvals %}
+  <li>
+    <div><h3>{{ item.intent.action | title }} · {{ item.intent.record_count | number }} {{ item.intent.resource_type }} records</h3>
+      <p>{{ item.intent.actor_id }} · {{ item.source }} · Destination {{ item.intent.destination }}</p>
+      <p><span class="label">{{ item.status }}</span> · {{ item.requester or ('Scheduled service' if item.intent.channel == 'scheduled' else 'Former member') }}{% if item.reviewer %} · Reviewed by {{ item.reviewer }}{% endif %}</p>
+      <details><summary>Request details</summary>
+        <p>Operation <span class="identifier">{{ item.id }}</span></p><p>Expires {{ item.expires_at | dt }}</p>
+        {% if item.intent.schedule_id %}<p>Schedule {{ item.intent.schedule_id }} · {{ item.intent.scheduled.occurred_at }}</p>{% endif %}
+        {% if item.intent.recipient_id %}<p>Recipient {{ member_names.get(item.intent.recipient_id, 'Former member') }} · Link lifetime {{ item.intent.link_minutes }} minutes</p>{% endif %}
+        <p>Content SHA-256 <span class="identifier">{{ item.intent.content_sha256 }}</span></p>
+      </details>
+    </div>
+    {% if item.status == 'Pending' and member.role == 'admin' and item.requester_id != identity.principal_id %}
+    <div class="actions">
+      <form data-response-action="/api/v1/workspaces/{{ member.slug }}/protection/approvals/{{ item.id }}/approve"><button class="primary" aria-label="Approve transfer {{ item.id }}">Approve transfer</button><p class="feedback" role="status" hidden></p></form>
+      <form data-response-action="/api/v1/workspaces/{{ member.slug }}/protection/approvals/{{ item.id }}/deny"><button class="secondary" aria-label="Deny transfer {{ item.id }}">Deny transfer</button><p class="feedback" role="status" hidden></p></form>
+    </div>
+    {% elif item.status == 'Pending' and item.requester_id == identity.principal_id %}
+    <p>Another workspace admin must review this request.</p>
+    {% endif %}
+  </li>
+  {% endfor %}</ul>{% else %}<p class="caption">No sensitive transfers are waiting for review.</p>{% endif %}
+</section>
+
+<section class="panel records" id="managed-links" aria-labelledby="managed-links-title">
+  <div class="panel-head"><div><h2 id="managed-links-title">Managed cloud links</h2><p>Only the named recipient can download. Workspace admins can revoke access.</p></div></div>
+  {% if links %}<ul class="trace-list">{% for item in links %}
+    <li><div><h3>{{ item.recipient or 'Former member' }} · {{ item.record_count | number }} records</h3>
+      <p>{{ item.actor_id }} · {{ item.destination }} · Expires {{ item.expires_at | dt }}</p>
+      <span class="label">{{ item.status }}</span>
+      <details><summary>Link details</summary><p>Operation <span class="identifier">{{ item.id }}</span></p></details>
+    </div><div class="actions">
+      {% if item.status == 'Active' and item.recipient_id == identity.principal_id %}
+      <a class="button secondary" href="{{ base }}/protection/links/{{ item.id }}">Download</a>
+      {% endif %}
+      {% if item.status == 'Active' and (member.role == 'admin' or item.recipient_id == identity.principal_id) %}
+      <button class="secondary" type="button" data-copy-cloud="{{ base }}/protection/links/{{ item.id }}" aria-label="Copy cloud link {{ item.id }}">Copy link</button>
+      <p class="feedback" role="status" hidden></p>
+      {% endif %}
+      {% if item.status in ['Active', 'Withheld by policy'] and member.role == 'admin' %}
+      <form data-response-action="/api/v1/workspaces/{{ member.slug }}/protection/links/{{ item.id }}/revoke"><button class="secondary" aria-label="Revoke cloud link {{ item.id }}">Revoke link</button><p class="feedback" role="status" hidden></p></form>
+      {% endif %}
+    </div></li>
+  {% endfor %}</ul>{% else %}<p class="caption">Managed links appear when a source authorizes a private object for a recipient.</p>{% endif %}
+</section>
+
+{% if member.role == 'admin' %}
+<section class="panel" aria-labelledby="transfer-members-title">
+  <div class="panel-head"><div><h2 id="transfer-members-title">Workspace principal IDs</h2><p>Use these IDs when binding a request to a workspace member from a trusted integration.</p></div></div>
+  <details class="inset"><summary>Show workspace member IDs</summary>
+    <dl class="response-fields">{% for person in recipients %}<div><dt>{{ person.name }}</dt><dd class="identifier">{{ person.id }}</dd></div>{% endfor %}</dl>
+    <p class="help">Workspace ID <span class="identifier">{{ member.id }}</span></p>
+  </details>
+</section>
+{% endif %}

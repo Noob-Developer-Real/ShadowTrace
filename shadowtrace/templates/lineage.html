@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block workspace %}
+<a class="breadcrumbs" href="{{ base }}/activity?actor={{ trace.export.actor_id | urlencode }}&amp;action=export"><span class="chev back" aria-hidden="true"></span>Export activity</a>
+<header class="page-title trace-heading">
+  <div class="trace-intro"><h1>Record lineage</h1>
+  <p><a class="record-link identifier" href="{{ base }}/actors/id-{{ trace.export.actor_id | urlencode }}">{{ trace.export.actor_id }}</a> · {{ trace.export.resource_type | title }} export · {{ trace.export.occurred_at | dt }}</p>
+  <p class="identifier">Export {{ trace.export.event_id }}</p></div>
+  {% if cases %}<a class="button secondary" href="{{ base }}/cases/{{ cases[0].id }}">Open related case <span class="chev" aria-hidden="true"></span></a>
+  {% elif trace.manifest_count %}<form data-response-action="/api/v1/workspaces/{{ member.slug }}/exports/id-{{ trace.export.event_id | urlencode }}/case">
+    <button class="secondary">Open a case</button><p class="feedback" role="status" hidden></p>
+  </form>{% endif %}
+</header>
+
+<p class="notice" role="status" data-response-feedback hidden></p>
+
+{% if trace.manifest_count %}
+<section class="panel trace-panel" aria-labelledby="trace-summary">
+  <div class="panel-head">
+    <div><h2 id="trace-summary">Where these records were observed</h2><p>Same record fingerprints across connected systems. Each count is deduplicated within its stage.</p></div>
+    <span class="label">{{ trace.manifest_count | number }} of {{ trace.export.records_accessed | number }} fingerprinted</span>
+  </div>
+  <ol class="trace-stages">
+    <li><span class="trace-stage-label">Previously viewed</span><strong>{{ trace.viewed | number }}</strong><small>Exported fingerprints also seen in this actor’s views in the previous {{ trace.lookback_days }} days</small></li>
+    <li><span class="trace-stage-label">Exported</span><strong>{{ trace.export.records_accessed | number }}</strong><small>{{ trace.manifest_count | number }} tracked fingerprints reported by {{ trace.export.label }}</small></li>
+    <li><span class="trace-stage-label">Matched at destination</span><strong>{{ trace.received | number }}</strong><small>Exported fingerprints matched in {{ trace.reported_receipts | number }} destination {{ 'receipt' if trace.reported_receipts == 1 else 'receipts' }}</small></li>
+  </ol>
+  <div class="trace-coverage">
+    <div><h3>Matched across all three stages</h3><strong>{{ trace.all_stages | number }} records</strong></div>
+    <div><h3>Without a receipt match</h3><strong>{{ trace.unobserved | number }} tracked records</strong></div>
+    <div><h3>Outside fingerprint coverage</h3><strong>{{ trace.untagged | number }} exported records</strong></div>
+  </div>
+  {% if trace.views_capped or trace.receipts_capped %}<p class="notice">Results use up to 500 prior view manifests and the 50 most recent receipts. Older activity may contain additional matches.</p>{% endif %}
+  {% if trace.export.expected_destination %}<p class="trace-scope">Expected destination <strong>{{ trace.export.expected_destination }}</strong> · Signed receipt due {{ trace.export.receipt_due_at | dt }}</p>{% endif %}
+  {% if trace.signed_reports %}<p class="trace-scope"><strong>{{ trace.same_file_matches | number }}</strong> tracked records matched in same-file receipts · {{ trace.signed_reports | number }} signed {{ 'report' if trace.signed_reports == 1 else 'reports' }} analyzed.</p>{% endif %}
+  <p class="trace-scope">Matches compare reports from instrumented sources. A missing receipt leaves the destination unknown.</p>
+</section>
+
+<div class="trace-reports">
+  <section class="panel records"><div class="panel-head"><div><h2>Destination receipts</h2><p>Source, observation time and overlap with the export manifest.</p></div></div>
+    {% if trace.receipts %}<ul class="trace-list">{% for receipt in trace.receipts %}
+    <li><div><h3>{{ receipt.destination }}</h3><p>{{ receipt.label }} · {{ receipt.occurred_at | dt }}</p>
+      <p><span class="label">{{ receipt.proof_label }}</span>{% if receipt.signature %} · Signature verified at intake{% endif %}</p>
+      <details><summary>Receipt details</summary><p class="identifier">{{ receipt.receipt_id }}</p><p>Accepted {{ receipt.received_at | dt }}</p>
+        {% if receipt.signature %}<p>Source file SHA-256 <span class="identifier">{{ trace.export.artifact_sha256 or 'Unavailable' }}</span></p>
+        <p>Received file SHA-256 <span class="identifier">{{ receipt.artifact_sha256 }}</span></p>{% endif %}
+      </details></div>
+      <div class="trace-match"><strong>{{ receipt.matched | number }} of {{ receipt.submitted | number }}</strong><small>fingerprints matched</small>
+        {% if receipt.outside_manifest %}<small>{{ receipt.outside_manifest | number }} outside export manifest</small>{% endif %}</div></li>
+    {% endfor %}</ul>
+    {% if trace.reported_receipts > trace.receipts | length %}<p class="caption">Showing the {{ trace.receipts | length }} most recent receipts used in this analysis.</p>{% endif %}
+    {% else %}<p class="empty">No destination receipts have been received for this export.</p>{% endif %}
+  </section>
+  <section class="panel records"><div class="panel-head"><div><h2>Prior matching views</h2><p>View events with fingerprints also present in this export.</p></div></div>
+    {% if trace.views %}<ul class="trace-list">{% for view in trace.views %}
+    <li><div><h3>{{ view.label }}</h3><p>{{ view.occurred_at | dt }}</p><p class="identifier">{{ view.event_id }}</p></div>
+      <div class="trace-match"><strong>{{ view.matched | number }}</strong><small>matched fingerprints</small></div></li>
+    {% endfor %}</ul>
+    {% if trace.matching_views > trace.views | length %}<p class="caption">Showing the {{ trace.views | length }} most recent matching views.</p>{% endif %}
+    {% else %}<p class="empty">No matching view fingerprints were observed in this lookback window.</p>{% endif %}
+  </section>
+</div>
+{% include "_impact.html" %}
+{% else %}
+<section class="panel trace-panel trace-empty"><h2>Count-only export</h2><p>{{ trace.export.label }} reported {{ trace.export.records_accessed | number }} {{ trace.export.resource_type }} records. Add a fingerprint manifest to future exports to trace overlap across integrations.</p></section>
+{% endif %}
+{% endblock %}

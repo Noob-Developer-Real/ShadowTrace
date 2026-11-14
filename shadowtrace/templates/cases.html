@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% from "_controls.html" import case_rows, empty, pager with context %}
+{% block workspace %}
+<header class="page-title"><h1>Cases</h1><p>Prioritize suspicious access and investigate the evidence.</p></header>
+<nav class="tabs" aria-label="Case queues"><a href="{{ base }}/cases" aria-current="page">All cases</a><a href="{{ base }}/cases/follow-up">Follow-up</a></nav>
+<form class="filter-bar" action="{{ base }}/cases" method="get">
+  <label>Status<select name="status"><option value="">All statuses</option>{% for key,label in status_names.items() %}<option value="{{ key }}" {% if values.status == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label>Severity<select name="severity"><option value="">All severities</option>{% for key in ['critical','high'] %}<option value="{{ key }}" {% if values.severity == key %}selected{% endif %}>{{ key | title }}</option>{% endfor %}</select></label>
+  <label>Actor ID<input name="actor" placeholder="e.g. support-014" maxlength="80" value="{{ values.actor }}"></label>
+  <label class="check"><input type="checkbox" name="owner" value="me" {% if values.owner %}checked{% endif %}>My cases</label>
+  <button class="primary">Apply filters</button><a class="quiet" href="{{ base }}/cases">Clear</a>
+</form>
+{% if problem %}<p class="notice error" role="alert">{{ problem }}</p>{% endif %}
+<section class="panel records"><div class="panel-head"><div><h2>Case queue</h2><p>Latest detection activity first.</p></div></div>
+{% if cases %}{{ case_rows(cases, member.slug, request.url.path ~ ('?' ~ request.url.query if request.url.query else ''), true) }}
+{% elif values.status or values.severity or values.actor or values.owner %}{{ empty("No cases match these filters.", "Clear filters to see the full queue.") }}
+{% else %}{{ empty("No cases yet.", "Check Activity to confirm your integration is sending events.") }}{% endif %}
+{{ pager(prev, more) }}
+</section>
+{% endblock %}

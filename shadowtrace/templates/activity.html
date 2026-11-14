@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "_controls.html" import empty, pager with context %}
+{% block workspace %}
+<header class="page-title"><h1>Activity</h1><p>Inspect accepted events and compare source and receipt times.</p></header>
+<form class="filter-bar" action="{{ base }}/activity" method="get">
+  <label>Actor ID<input name="actor" placeholder="e.g. support-014" maxlength="80" value="{{ values.actor }}"></label>
+  <label>Action<select name="action"><option value="">All actions</option>{% for key in ['view','export'] %}<option value="{{ key }}" {% if values.action == key %}selected{% endif %}>{{ key | title }}</option>{% endfor %}</select></label>
+  <button class="primary">Apply filters</button><a class="quiet" href="{{ base }}/activity">Clear</a>
+</form>
+{% if problem %}<p class="notice error" role="alert">{{ problem }}</p>{% endif %}
+<section class="panel records"><div class="panel-head"><div><h2>Audit events</h2><p>Most recently accepted first. Times are in UTC.</p></div></div>
+{% if events %}
+<div class="table-scroll" tabindex="0" role="region" aria-label="Audit events table"><table>
+<thead><tr>{% for column in ['Event / actor','Action','Resource','Records','Source','Observed','Accepted','Outcome'] %}<th scope="col">{{ column }}</th>{% endfor %}</tr></thead>
+<tbody>{% for event in events %}<tr>
+<td class="identifier">{{ event.event_id }}<small><a href="{{ base }}/actors/id-{{ event.actor_id | urlencode }}">{{ event.actor_id }}</a></small></td>
+<td>{{ event.action | title }}{% if event.action == 'export' and event.outcome == 'success' %}<small><a href="{{ base }}/exports/id-{{ event.event_id | urlencode }}">Trace export <span class="sr-only">{{ event.event_id }}</span></a></small>{% endif %}</td><td>{{ event.resource_type | title }}</td><td class="numeric">{{ event.records_accessed | number }}</td>
+<td>{{ event.label }}</td><td class="timestamp">{{ event.occurred_at | dt('short') }}</td><td class="timestamp">{{ event.received_at | dt('short') }}</td>
+<td>{{ event.outcome | title }}</td></tr>{% endfor %}</tbody></table></div>
+{% elif values.actor or values.action %}{{ empty("No events match these filters.", "Clear filters to see all recent activity.") }}
+{% else %}{{ empty("No events yet.", "Send a test event from your integration, then reload this page.") }}{% endif %}
+{{ pager(prev,more) }}
+</section>
+{% endblock %}

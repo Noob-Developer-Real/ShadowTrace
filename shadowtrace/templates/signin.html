@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block public %}
+<div class="welcome">
+  <div>
+    <h1>Investigate unusual access.</h1>
+    <p>Trace sensitive data access from the first event to the analyst’s decision.</p>
+    <div class="welcome-trace" aria-hidden="true">
+      <span>Access event</span><i></i><span>Detection</span><i></i><span>Case review</span>
+    </div>
+  </div>
+  <section class="panel sign-card">
+    <h2>Sign in to ShadowTrace</h2>
+    {% if interrupted %}<p class="notice error" role="alert">Your sign-in could not be completed. Try again or contact your workspace administrator.</p>{% endif %}
+    {% if demo %}
+      <p class="help">Choose a demo identity. All activity is synthetic.</p>
+      <form data-demo-form data-next="{{ intended }}" class="demo-choices">
+        <button name="identity" value="northwind-analyst" class="primary"><strong>Northwind Commerce</strong><small>Analyst</small></button>
+        <button name="identity" value="northwind-admin" class="secondary"><strong>Northwind Commerce</strong><small>Workspace admin</small></button>
+        <button name="identity" value="harbor-analyst" class="secondary"><strong>Harbor Supply</strong><small>Analyst</small></button>
+        <p class="feedback" role="status" hidden></p>
+      </form>
+    {% else %}
+      <p class="help">Use your organization account.</p>
+      <a class="button primary" href="/auth/sso{% if intended %}?next={{ intended | urlencode }}{% endif %}">Continue with SSO<span class="chev" aria-hidden="true"></span></a>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

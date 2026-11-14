@@ -1,0 +1,12 @@
+.venv/
+.demo/
+.env*
+!.env.example
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.pyc
+*.dump
+*.log
+.DS_Store
+shadowtrace-case*.json

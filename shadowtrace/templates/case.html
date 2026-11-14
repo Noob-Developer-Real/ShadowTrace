@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% from "_controls.html" import case_name, severity, empty with context %}
+{% block workspace %}
+<a class="breadcrumbs" href="{{ back }}"><span class="chev back" aria-hidden="true"></span>Back to cases</a>
+<header class="page-title case-title">
+  <div class="case-meta">{{ severity(case.severity) }}<span class="label">{{ status_names[case.status] }}</span><span class="identifier">Case {{ (case.id | string)[:8] }}</span></div>
+  {% set view_signals = signals | selectattr("rule", "equalto", "view_burst") | list %}
+  {% set export_signals = signals | selectattr("rule", "equalto", "large_export") | list %}
+  <h1>{% if view_signals and export_signals %}{{ "Burst access followed by export" if view_signals[0].detected_at < export_signals[0].detected_at else "Burst access and bulk export" }}{% else %}{{ case_name(case) }}{% endif %}</h1><p><a class="identifier record-link" href="{{ base }}/actors/id-{{ case.actor_id | urlencode }}">{{ case.actor_id }}</a> · {{ case.resource_type | title }} records · Opened {{ case.opened_at | dt('short') }}</p>
+</header>
+
+<p class="notice" role="status" data-response-feedback hidden></p>
+<section class="panel findings">
+  <div class="panel-head"><h2>Why this case opened</h2></div>
+  {% for signal in signals[:100] %}<article class="finding">
+    <div class="finding-symbol {% if signal.rule == 'large_export' %}export{% endif %}" aria-hidden="true"></div>
+    <div><h3>{% if signal.rule == 'view_burst' %}View burst{% else %}Large export{% endif %}</h3>
+      <p>{% if signal.rule == 'view_burst' %}{{ signal.observed | number }} records viewed in five minutes.{% else %}{{ signal.observed | number }} records in one export.{% endif %}</p></div>
+    <small>Threshold {{ signal.threshold | number }}<br>Rule version {{ signal.rule_version }}</small>
+  </article>{% endfor %}
+  {% if not signals %}<p class="caption">An analyst opened this case to review the export evidence.</p>{% endif %}
+  <div class="baseline">
+    <div><h3>Actor baseline</h3>
+      {% if baseline and baseline.ready %}
+        <p>Typically {{ baseline.typical | number }} {{ case.resource_type }} records per active five-minute window. The 90th percentile was {{ baseline.upper | number }}.</p>
+        <small>{{ baseline.samples }} windows across {{ baseline.days }} UTC days before the case.</small>
+      {% else %}<p>Insufficient history for a comparison.</p><small>Needs eight active windows across at least three UTC days.</small>{% endif %}
+    </div>
+    {% if ratio is not none %}<div class="baseline-ratio"><strong>{{ "%.1f" | format(ratio) }}×</strong><small>the prior 90th percentile</small></div>{% endif %}
+    <a class="quiet" href="{{ base }}/actors/id-{{ case.actor_id | urlencode }}">View actor profile</a>
+  </div>
+  {% if signals | length > 100 %}<p class="caption">Showing the first 100 rule results.</p>{% endif %}
+</section>
+{% if trace %}
+<section class="panel case-trace">
+  <div class="panel-head"><div><h2>Record lineage</h2><p>Follow the same records from prior views to destination receipts.</p></div>
+    <a class="button secondary" href="{{ base }}/exports/id-{{ trace.export.event_id | urlencode }}">Explore record lineage <span class="chev" aria-hidden="true"></span></a>
+  </div>
+  <dl class="case-trace-stats">
+    <div><dt>Exported</dt><dd>{{ trace.export.records_accessed | number }}</dd></div>
+    <div><dt>Previously viewed</dt><dd>{{ trace.viewed | number }}</dd></div>
+    <div><dt>Matched at destination</dt><dd>{{ trace.received | number }}</dd></div>
+    <div><dt>Tracked without a receipt match</dt><dd>{{ trace.unobserved | number }}</dd></div>
+  </dl>
+  {% if trace.untagged or trace.views_capped or trace.receipts_capped %}<p class="caption">View the trace for coverage and analysis limits.</p>{% endif %}
+</section>
+{% endif %}
+<div class="case-grid">
+  <section class="panel timeline-panel">
+    <div class="panel-head"><div><h2>Evidence timeline</h2><p>Events in the order they were received.</p></div>
+      <button type="button" class="secondary" data-evidence="/api/v1/workspaces/{{ member.slug }}/cases/{{ case.id }}/evidence">Download evidence</button>
+    </div>
+    <p class="notice" data-download-status role="status" hidden></p>
+    {% if case.evidence_expired %}<p class="notice">Some events expired under this workspace’s retention policy.</p>{% endif %}
+    {% if evidence %}
+    <ol class="timeline">{% for event in evidence[:100] %}<li class="{% if event.action == 'export' %}export{% endif %}">
+      <time datetime="{{ event.received_at.isoformat() }}">{{ event.received_at | dt }}</time>
+      <h3>{{ 'Viewed' if event.action == 'view' else 'Exported' }} {{ event.records_accessed | number }} {{ event.resource_type }} records</h3>
+      <p>{{ event.label }} · <span class="identifier">{{ event.event_id }}</span></p>
+      <small>Observed {{ event.occurred_at | dt }}</small>
+      {% if event.action == 'export' %}<a class="record-link" href="{{ base }}/exports/id-{{ event.event_id | urlencode }}">Trace this export</a>{% endif %}
+    </li>{% endfor %}</ol>{% else %}{{ empty("No source events available.", "Rule results remain visible for this case.") }}{% endif %}
+    {% if evidence | length > 100 %}<p class="caption">Showing the first 100 events. <a href="{{ base }}/activity?actor={{ case.actor_id | urlencode }}">View actor activity</a></p>{% endif %}
+  </section>
+  <section class="panel review-panel">
+    <div class="panel-head"><h2>Review</h2></div>
+    <form data-owner data-url="/api/v1/workspaces/{{ member.slug }}/cases/{{ case.id }}/owner" data-revision="{{ case.version }}" class="stack owner-form">
+      <label>Case owner<select name="assignee"><option value="">Unassigned</option>{% for candidate in members %}<option value="{{ candidate.id }}" {% if candidate.id == case.assignee_id %}selected{% endif %}>{{ candidate.name }}{% if candidate.id == identity.principal_id %} (you){% endif %}</option>{% endfor %}</select></label>
+      <div class="actions"><button class="secondary" type="submit">Save owner</button><button class="quiet" type="button" data-owner-refresh hidden>Load latest owner</button></div>
+      <p role="status" class="feedback" hidden></p>
+    </form>
+    <form data-review data-url="/api/v1/workspaces/{{ member.slug }}/cases/{{ case.id }}/reviews"
+          data-case="{{ case.id }}" data-revision="{{ case.version }}" data-mutation="{{ mutation_id }}" class="stack">
+      <label>Set status<select name="status" required>{% for key,label in status_names.items() %}<option value="{{ key }}" {% if case.status == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+      <label data-close-reason hidden>Close reason<select name="disposition"><option value="">Choose a reason</option>{% for value,label in dispositions.items() %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
+      <label>Review note<textarea name="note" rows="4" maxlength="1000" placeholder="Record your decision and relevant context." aria-describedby="review-hint"></textarea></label>
+      <p class="help" id="review-hint">A note and close reason are required when resolving or dismissing a case.</p>
+      <div class="actions"><button class="primary" type="submit">Save review</button><button class="secondary" type="reset">Cancel</button></div>
+      <p role="status" class="feedback" hidden></p>
+      <button type="button" class="secondary refresh-draft" hidden>Reload case and keep draft</button>
+    </form>
+    <div class="review-history"><h3>Review history</h3>
+    {% if reviews %}<ol>{% for review in reviews[:50] %}<li data-completed="{{ review.mutation_id }}">
+      <strong>{{ status_names[review.status] }}</strong>{% if review.disposition %}<span class="label">{{ dispositions[review.disposition] }}</span>{% endif %}<time datetime="{{ review.created_at.isoformat() }}">{{ review.created_at | dt('short') }}</time>
+      <small>{{ review.author }}</small>{% if review.note %}<p>{{ review.note }}</p>{% endif %}
+    </li>{% endfor %}</ol>{% else %}<p class="help">No reviews recorded yet.</p>{% endif %}
+    {% if reviews | length > 50 %}<p class="help">Showing the 50 most recent reviews.</p>{% endif %}</div>
+  </section>
+</div>
+{% endblock %}
