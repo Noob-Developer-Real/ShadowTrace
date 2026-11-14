@@ -1,0 +1,3 @@
+export ST_PG_BIN=/Library/PostgreSQL/18/bin
+"$ST_PG_BIN/initdb" --version
+./scripts/demo.sh serve

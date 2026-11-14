@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   {% if identity %}<meta name="csrf-token" content="{{ identity.csrf }}">{% endif %}
   <title>{{ title }} | ShadowTrace</title>
-  <link rel="icon" href="/static/mark.svg" type="image/svg+xml">
+  <link rel="icon" href="/static/img/logo-neon.png" type="image/svg+xml">
   <link rel="stylesheet" href="/static/console.css">
   <script src="/static/theme.js"></script>
   <script src="/static/console.js" defer></script>
@@ -16,7 +16,13 @@
 {% set base = "/w/" ~ member.slug %}
 <div class="shell">
   <aside class="rail">
-    <a class="brand" href="{{ base }}"><img src="/static/mark.svg" alt="" width="30" height="30">ShadowTrace</a>
+    <a class="brand" href="{{ base }}">
+      <img src="/static/img/logo.png" alt="ShadowTrace Logo" width="36" height="36">
+    
+      <span class="brand-name">
+        Shadow<span class="brand-accent">Trace</span>
+      </span>
+    </a>
     <a class="workspace" href="/workspaces"><span class="avatar" aria-hidden="true">{{ member.name[0] }}</span><span>{{ member.name }}<small>{{ member.role | title }}</small></span><span class="chev" aria-hidden="true"></span></a>
     <nav aria-label="Workspace">
       {% for label,path,icon in [("Overview","","overview"),("Cases","/cases","cases"),("Activity","/activity","activity"),("Protection","/protection","protection"),("Settings","/settings","settings")] %}
@@ -36,7 +42,14 @@
   </div>
 </div>
 {% else %}
-<header class="public-top"><a class="brand" href="/"><img src="/static/mark.svg" alt="" width="30" height="30">ShadowTrace</a>
+<header class="public-top">
+  <a class="brand" href="{{ base }}">
+    <img src="/static/img/logo.png" alt="ShadowTrace Logo" width="36" height="36">
+
+    <span class="brand-name">
+      Shadow<span class="brand-accent">Trace</span>
+    </span>
+  </a>
 {% if identity %}<button data-logout class="quiet">Sign out</button>{% endif %}</header>
 <main id="main" class="public-main" tabindex="-1">{% block public %}{% endblock %}</main>
 {% endif %}

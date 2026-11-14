@@ -1,28 +1,262 @@
 {% extends "base.html" %}
 {% block public %}
-<div class="welcome">
-  <div>
-    <h1>Investigate unusual access.</h1>
-    <p>Trace sensitive data access from the first event to the analyst’s decision.</p>
-    <div class="welcome-trace" aria-hidden="true">
-      <span>Access event</span><i></i><span>Detection</span><i></i><span>Case review</span>
+<div class="landing">
+
+  <div class="welcome">
+    <div>
+      <h1>Investigate unusual access.</h1>
+      <p>Trace sensitive data access from the first event to the analyst’s decision.</p>
+      <div class="welcome-trace" aria-hidden="true">
+        <span>Access event</span><i></i><span>Detection</span><i></i><span>Case review</span>
+      </div>
+
+      <aside class="panel trace-sample" aria-labelledby="sample-title">
+        <header>
+          <strong id="sample-title">Example case</strong>
+          <span class="badge severity-high"><span></span>High</span>
+        </header>
+        <ol>
+          <li><time>02:14</time><span><strong>Customer export started</strong><small>48,000 rows from the orders
+                table</small></span></li>
+          <li><time>02:15</time><span><strong>Flagged as unusual</strong><small>About 40 times what this account
+                normally exports</small></span></li>
+          <li><time>09:40</time><span><strong>Marked for follow-up</strong><small>Analyst asked the data owner to
+                confirm</small></span></li>
+        </ol>
+        <small class="sample-foot">Sample data for illustration.</small>
+      </aside>
     </div>
-  </div>
-  <section class="panel sign-card">
-    <h2>Sign in to ShadowTrace</h2>
-    {% if interrupted %}<p class="notice error" role="alert">Your sign-in could not be completed. Try again or contact your workspace administrator.</p>{% endif %}
-    {% if demo %}
+
+    <section class="panel sign-card" id="signin">
+      <h2>Sign in to ShadowTrace</h2>
+      {% if interrupted %}<p class="notice error" role="alert">Your sign-in could not be completed. Try again or contact
+        your workspace administrator.</p>{% endif %}
+      {% if demo %}
       <p class="help">Choose a demo identity. All activity is synthetic.</p>
       <form data-demo-form data-next="{{ intended }}" class="demo-choices">
-        <button name="identity" value="northwind-analyst" class="primary"><strong>Northwind Commerce</strong><small>Analyst</small></button>
-        <button name="identity" value="northwind-admin" class="secondary"><strong>Northwind Commerce</strong><small>Workspace admin</small></button>
-        <button name="identity" value="harbor-analyst" class="secondary"><strong>Harbor Supply</strong><small>Analyst</small></button>
+        <button name="identity" value="northwind-analyst" class="primary"><strong>Northwind
+            Commerce</strong><small>Analyst</small></button>
+        <button name="identity" value="northwind-admin" class="secondary"><strong>Northwind
+            Commerce</strong><small>Workspace admin</small></button>
+        <button name="identity" value="harbor-analyst" class="secondary"><strong>Harbor
+            Supply</strong><small>Analyst</small></button>
         <p class="feedback" role="status" hidden></p>
       </form>
-    {% else %}
+      {% else %}
       <p class="help">Use your organization account.</p>
-      <a class="button primary" href="/auth/sso{% if intended %}?next={{ intended | urlencode }}{% endif %}">Continue with SSO<span class="chev" aria-hidden="true"></span></a>
-    {% endif %}
+      <a class="button primary" href="/auth/sso{% if intended %}?next={{ intended | urlencode }}{% endif %}">Continue
+        with SSO<span class="chev" aria-hidden="true"></span></a>
+      {% endif %}
+      <p class="sign-note">You’ll only see the workspaces you belong to.</p>
+    </section>
+  </div>
+
+  <section class="landing-section" aria-labelledby="preview-title">
+    <div class="section-head">
+      <h2 id="preview-title">See what needs attention first</h2>
+      <p>The overview shows your open cases, how busy the last few days have been, and which cases are critical or
+        high. Start at the top of the list.</p>
+    </div>
+    <figure class="shot">
+      <img src="/static/img/overview.png" width="960" height="560"
+        alt="The ShadowTrace overview: open case counts, an hourly activity chart and a list of open cases with severity labels.">
+      <figcaption>The workspace overview, shown with sample data.</figcaption>
+    </figure>
   </section>
+
+  <section class="landing-section" aria-labelledby="features-title">
+    <div class="section-head">
+      <h2 id="features-title">Where you’ll spend your time</h2>
+      <p>Cases, Activity and Protection each have their own page in the sidebar. This is what each one is for.</p>
+    </div>
+
+    <article class="feature-row">
+      <div class="feature-copy">
+        <span class="feature-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7"
+            stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="3.5" width="16" height="17" rx="2.5" />
+            <path d="M8 9h8M8 13h8M8 17h4" />
+          </svg>
+        </span>
+        <h3>Review cases</h3>
+        <p>A case collects the events that looked wrong, in the order they happened. Read it through, write down what
+          you decided, then close it or flag it for follow-up.</p>
+        <ul class="ticks">
+          <li>Findings sorted by severity, critical first</li>
+          <li>A timeline of every event in the case</li>
+          <li>A history of who reviewed it and what they said</li>
+        </ul>
+      </div>
+      <img class="feature-img" src="/static/img/case-review.png" width="1280" height="881" loading="lazy"
+        alt="A case page in ShadowTrace: a critical bulk export with a timeline from the first sign-in to the analyst’s follow-up.">
+    </article>
+
+    <article class="feature-row reverse">
+      <div class="feature-copy">
+        <span class="feature-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="6" cy="6" r="2.5" />
+            <circle cx="18" cy="12" r="2.5" />
+            <circle cx="6" cy="18" r="2.5" />
+            <path d="M8.3 7.2l7.4 3.6M8.3 16.8l7.4-3.6" />
+          </svg>
+        </span>
+        <h3>Follow the record</h3>
+        <p>Pick a record and see who touched it and where it went afterwards. Lineage shows the whole path, from the
+          first access to wherever the data ended up.</p>
+        <ul class="ticks">
+          <li>Every hop between the source and the destination</li>
+          <li>Destinations nobody expected are marked</li>
+          <li>Open the case a record belongs to from the same page</li>
+        </ul>
+      </div>
+      <img class="feature-img" src="/static/img/lineage.png" width="1280" height="881" loading="lazy"
+        alt="The record lineage page: one source, three exports and two destinations, with the unexpected destination marked.">
+    </article>
+
+    <article class="feature-row">
+      <div class="feature-copy">
+        <span class="feature-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3l7 3v5.5c0 4.3-2.9 7.6-7 9.5-4.1-1.9-7-5.2-7-9.5V6z" />
+            <path d="M8.8 12.2l2.2 2.2 4.2-4.4" />
+          </svg>
+        </span>
+        <h3>Check protection</h3>
+        <p>The Protection page lists the transfers that were stopped and the reason each one was stopped. If a number
+          jumps, you’ll see it here first.</p>
+        <ul class="ticks">
+          <li>Blocked transfers in a single log</li>
+          <li>The reason recorded for each block</li>
+          <li>Totals at the top, so a spike is easy to spot</li>
+        </ul>
+      </div>
+      <img class="feature-img" src="/static/img/protection.png" width="1280" height="881" loading="lazy"
+        alt="The Protection page: blocked and allowed transfer counts above a log of recent transfers and their results.">
+    </article>
+  </section>
+
+  <section class="landing-section" aria-labelledby="flow-title">
+    <div class="section-head">
+      <h2 id="flow-title">From first event to decision</h2>
+      <p>Every case goes through the same three steps.</p>
+    </div>
+    <ol class="flow">
+      <li class="panel">
+        <h3>Detect</h3>
+        <p>Access that doesn’t match an account’s normal pattern is flagged. Related events are grouped into one case
+          and given a severity.</p>
+      </li>
+      <li class="panel">
+        <h3>Review</h3>
+        <p>An analyst reads the findings and the timeline, then records what they decided and why.</p>
+      </li>
+      <li class="panel">
+        <h3>Follow up</h3>
+        <p>If something needs a second look, it stays on the case as a follow-up until someone closes it.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="landing-section" aria-labelledby="roles-title">
+    <div class="section-head">
+      <h2 id="roles-title">Who uses it</h2>
+      <p>Your role is set per workspace, so you can be an analyst in one and an admin in another.</p>
+    </div>
+    <div class="roles">
+      <article class="panel role">
+        <span class="feature-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="10.5" cy="10.5" r="6" />
+            <path d="M15 15l5 5" />
+          </svg>
+        </span>
+        <h3>Analysts</h3>
+        <p>Work through the case list, read each timeline, add notes, and mark anything that needs a follow-up.</p>
+      </article>
+      <article class="panel role">
+        <span class="feature-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path
+              d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" />
+          </svg>
+        </span>
+        <h3>Workspace admins</h3>
+        <p>Look after the workspace settings and check that protection is doing its job.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="landing-section" aria-labelledby="faq-title">
+    <div class="section-head">
+      <h2 id="faq-title">Common questions</h2>
+    </div>
+    <div class="faq">
+      <details>
+        <summary>What is a case?</summary>
+        <p>A group of related access events that looked unusual. Reviewing them together means one decision per case
+          instead of one per event.</p>
+      </details>
+      <details>
+        <summary>Who can see my workspace?</summary>
+        <p>Only its members. After you sign in you’ll see the workspaces you belong to, and nothing else.</p>
+      </details>
+      <details>
+        <summary>Is the demo using real data?</summary>
+        <p>No. The demo identities (Northwind Commerce and Harbor Supply) and everything inside them are synthetic.</p>
+      </details>
+      <details>
+        <summary>I can’t sign in. What now?</summary>
+        <p>Try once more. If it fails again, ask your workspace administrator, or email
+          <a href="mailto:contact@tejasdeveloper.xyz">contact@tejasdeveloper.xyz</a>.
+        </p>
+      </details>
+    </div>
+  </section>
+
+  <section class="trust" aria-labelledby="trust-title">
+    <div>
+      <h2 id="trust-title">Sign in and open your workspace</h2>
+      <p>Use your organization account. You’ll land on the workspaces you’ve been given access to.</p>
+    </div>
+    <a class="button" href="#signin">Back to sign in</a>
+  </section>
+
+  <footer class="landing-foot">
+    <div class="foot-main">
+      <div class="foot-brand">
+        <a class="brand" href="{{ base }}">
+          <img src="/static/img/logo.png" alt="ShadowTrace Logo" width="36" height="36">
+          <span class="brand-name">
+            Shadow<span>Trace</span>
+          </span>
+        </a>
+        <p>Trace unusual access to sensitive data, from the first event to the decision.</p>
+      </div>
+      <nav class="foot-col" aria-label="Page sections">
+        <h2>Explore</h2>
+        <a href="#preview-title">Overview</a>
+        <a href="#features-title">Features</a>
+        <a href="#faq-title">Common questions</a>
+        <a href="#signin">Sign in</a>
+      </nav>
+      <div class="foot-col" id="support">
+        <h2>Help and support</h2>
+        <p>Questions, or can’t get in? Email us and we’ll reply.</p>
+        <a class="foot-mail" href="mailto:contact@tejasdeveloper.xyz">contact@tejasdeveloper.xyz</a>
+      </div>
+    </div>
+    <div class="foot-base">
+      <span>© 2026 ShadowTrace</span>
+      {% if demo %}<span>This demo uses synthetic activity only.</span>{% endif %}
+    </div>
+  </footer>
+
 </div>
 {% endblock %}
